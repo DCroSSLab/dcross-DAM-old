@@ -17,10 +17,14 @@ tasker.conf.update(
     result_expires=3600,
 )
 tasker.conf.beat_schedule = {
-    'earthquake-every-2-minutes': {
+    'earthquake-every-5-minutes': {
         'task': 'celena.tasks.earthquakes',
-        'schedule': crontab(minute='*/2')
+        'schedule': crontab(minute='*/5')
     },
+    'nowcasts-every-5-minutes': {
+        'task': 'celena.tasks.nowcasts',
+        'schedule': crontab(minute='*/5')
+    }
 }
 tasker.conf.timezone = 'UTC'
 

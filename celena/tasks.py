@@ -24,6 +24,13 @@ def earthquakes():
     feed.record_ncs_earthquakes(ncs_earthquakes)
 
 
+@tasker.task(rate_limit='1/m')
+def nowcasts():
+    print("Fetching Nowcasts from IMD")
+    ncs_earthquakes = feed.get_earthquakes_ncs()
+    feed.record_ncs_earthquakes(ncs_earthquakes)
+
+
 # @tasker.on_after_configure.connect
 # def schedule_regular_tasks(sender, **kwargs):
 #     sender.add_periodic_task(

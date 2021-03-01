@@ -1,4 +1,5 @@
 import datetime
+import json
 import re
 import pytz
 import requests
@@ -81,17 +82,26 @@ class EarthquakeFeeds:
                 continue
             naive = datetime.datetime.strptime(earthquake['origin_time'][:19], '%Y-%m-%d %H:%M:%S')
             time = indian.localize(naive)
-            latitude = earthquake['lat_long'][:5]
-            longitude = earthquake['lat_long'][7:]
-            mag_depth = earthquake['magnitude_depth'].split(' - ')
-            magnitude = mag_depth[0].replace('M: ', '')
-            depth = mag_depth[1].replace('D: ', '')
-            # magnitude is type converted to float, look into type converting depth to json structure like value, unit
+            lat_long = earthquake['lat_long'].split(', ')
+            # latitude = float(earthquake['lat_long'][:5])
+            # longitude = float(earthquake['lat_long'][7:])
+            latitude = float(lat_long[0])
+            longitude = float(lat_long[1])
+            mag_depth = earthquake['magnitude_depth']
+            magnitude = float(re.search(r"\d+\.?\d*", mag_depth).group())
+            depth = float(re.search(r"(\d*\.?\d*)km", mag_depth).group(1))
+            # magnitude = float(mag_depth[0].replace('M: ', ''))
+            # depth_string = mag_depth[1].replace('D: ', '')
+            # depth = float(depth_string.replace('km', ''))
+            # magnitude is type converted to float,
+            # look into type converting depth to json structure like value, unit - DONE!
             name = re.sub(r'M:\s(\d+\.\d+)\s-\s', '', earthquake['event_name'])
             event = dict(type="Feature", geometry=dict(type="Point", coordinates=[longitude, latitude]),
                          properties=dict(disaster_id=ObjectId(), disaster_type="earthquake", time=time, name=name,
-                                         magnitude=float(magnitude), depth=depth, total_reports=0, reports=[],
-                                         source="NCS", ncs_id=event_id))
+                                         magnitude=float(magnitude), depth=dict(value=depth, unit="km"),
+                                         total_reports=0, reports=[], source="NCS", ncs_id=event_id))
+            # print(event)
+            # break
             disasters.insert_one(event)
 
     # @tasker.task
@@ -104,3 +114,64 @@ class EarthquakeFeeds:
 feed = EarthquakeFeeds(DBClient())
 earthquakes = feed.get_earthquakes_ncs(days="30")
 feed.record_ncs_earthquakes(earthquakes)
+
+
+class IMDNowcastFeed:
+    def __init__(self, client):
+        self.conn = client
+        self.nowcasts = client.events.nowcasts
+
+    def get_mausam(self):
+        nowcasts = self.nowcasts
+        url = 'https://mausam.imd.gov.in/imd_latest/contents/stationwise-nowcast-warning.php'
+        page = requests.get(url)
+        soup = BeautifulSoup(page.content, features='html.parser')
+        test = soup.find('script', {'type': 'text/javascript'})
+        pattern = re.compile(r"\s+countrydataprovider\s+=\s+(\{.*?\});\n", flags=re.DOTALL)
+        data = re.findall(pattern, test.string)
+        data_fix = re.sub("([A-Za-z]+),", r'"\1",', data[0])
+        data_fix = re.sub("([A-za-z]+) :", r'"\1" :', data_fix)
+        data_json = json.loads(data_fix)
+        count = 0
+        # pprint(data_json['images'])
+        indian = pytz.timezone('Asia/Kolkata')
+        for forecast in data_json['images']:
+            if '<p>No Warning ' in forecast['description']:
+                # print(forecast['description'])
+                continue
+            if forecast['description'] == 'No data Available':
+                continue
+            # print(forecast['description'])
+            station = forecast['title']
+            longitude = float(forecast['longitude'])
+            latitude = float(forecast['latitude'])
+            date = re.search("[0-9]{4}-[0-9]{2}-[0-9]{2}", forecast['description']).group()
+            # print(date)
+            # times = re.search("[0-9]{4} Hrs", forecast['description'])
+            # issue_time = times.group(1)[:4]
+            # expire_time = times.group(2)[:4]
+            issue_time = date + ' ' + re.search("</br>[0-9]{4} Hrs</br>", forecast['description']).group()[5:9:1]
+            expire_time = date + ' ' + re.search("Valid upto: [0-9]{4} Hrs", forecast['description']).group()[12:16:1]
+            # issue_time -----> </br>2200 Hrs</br>  expire_time----->Valid upto: 0100 Hrs
+            # print(issue_time, expire_time)
+            naive_issue = datetime.datetime.strptime(issue_time, '%Y-%m-%d %H%M')
+            naive_expire = datetime.datetime.strptime(expire_time, '%Y-%m-%d %H%M')
+            issue_time = indian.localize(naive_issue)
+            expire_time = indian.localize(naive_expire)
+            exists = nowcasts.find_one({'properties.issue_time': issue_time})
+            if exists:
+                print("already exists!")
+                continue
+            # Remove all HTML tags, mainly <p>, </p> and </br> are present
+            dump = re.sub("<\/?[^><]+>", '', forecast['description'])
+            forecast_text = re.sub("( ? Time of issue: .*)", '', dump)
+            load = {'type': "Feature", 'geometry': {'type': "Point", 'coordinates': [longitude, latitude]},
+                    'properties': {'forecast_id': ObjectId(), 'forecast_type': "weather_nowcast", 'source': "IMD",
+                                   'station_name': station, 'station_type': "IMD-Station",
+                                   'forecast': {'description': forecast_text, 'issue_time': issue_time,
+                                                'expire_time': expire_time}}}
+            nowcasts.insert_one(load)
+
+
+# feed = IMDNowcastFeed(DBClient())
+# feed.get_mausam()

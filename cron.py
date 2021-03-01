@@ -12,7 +12,7 @@ import datetime
 # from slimit.parser import Parser
 # from slimit.visitors import nodevisitor
 # from slimit import ast
-# client = DBClient()
+client = DBClient()
 # feeder = EarthquakeFeeds(client)
 #
 # eqs = feeder.get_earthquakes_ncs(days="1")
@@ -55,8 +55,8 @@ def get_mausam():
             continue
         # print(forecast['description'])
         station = forecast['title']
-        longitude = forecast['longitude']
-        latitude = forecast['latitude']
+        longitude = float(forecast['longitude'])
+        latitude = float(forecast['latitude'])
         date = re.search("[0-9]{4}-[0-9]{2}-[0-9]{2}", forecast['description']).group()
         # print(date)
         # times = re.search("[0-9]{4} Hrs", forecast['description'])
@@ -78,7 +78,7 @@ def get_mausam():
                                'station_name': station, 'station_type': "IMD-Station",
                                'forecast': {'description': forecast_text, 'issue_time': issue_time,
                                             'expire_time': expire_time}}}
-        # print(load)
+        client.events.nowcasts.insert_one(load)
 
 
 def get_stations():
@@ -111,4 +111,5 @@ def get_stations():
 
 
 # replace_test()
-get_stations()
+# get_stations()
+# get_mausam()
