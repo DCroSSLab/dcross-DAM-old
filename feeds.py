@@ -173,5 +173,5 @@ class IMDNowcastFeed:
             nowcasts.insert_one(load)
 
 
-# feed = IMDNowcastFeed(DBClient())
-# feed.get_mausam()
+feed = IMDNowcastFeed(DBClient())
+feed.get_mausam()

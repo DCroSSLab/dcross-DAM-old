@@ -4,7 +4,7 @@ from bson.json_util import dumps, loads
 import json
 from datetime import datetime, timedelta
 import pytz
-uri = "mongodb://faraaz:winterfell@localhost:27017/?authSource=admin&authMechanism=SCRAM-SHA-256"
+uri = "mongodb+srv://Saumyaranjan:mongodb@cluster0.yqomn.mongodb.net/test"
 
 
 class DBClient:
