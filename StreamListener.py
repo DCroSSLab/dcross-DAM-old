@@ -3,42 +3,39 @@ from Twitterfeed import collection
 
 consumer_key = "zk9oBLweCS8HAVQUEaqDWFkxG"
 consumer_secret = "qlnLERV1NnTgcGn9CvlBTloIXac3ciucTPwjVjPOdPrBUuSjAJ"
-key = "1360094602234122242-lnnvTXeXHXQb4tzrvnFd02OzwTpzuO"
-secret = "O5A18DLGGPr5rsxPXDzk8fQgfsyp4gSkxlYMi6LO4WK2u"
+access_token = "1360094602234122242-lnnvTXeXHXQb4tzrvnFd02OzwTpzuO"
+access_token_secret = "O5A18DLGGPr5rsxPXDzk8fQgfsyp4gSkxlYMi6LO4WK2u"
 
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-auth.set_access_token(key, secret)
-
+auth.set_access_token(access_token, access_token_secret)
 api = tweepy.API(auth)
 
-hashtag = ["#FLOOD" or "#ASSAM" or "#assamflood"]
-tweetNumber = 3
 
-tweets = tweepy.Cursor(api.search, hashtag).items(tweetNumber)
-
-
-def searchBot():
-    for tweet in tweets:
-        print(tweet.text)
+class StreamListener(tweepy.StreamListener):
+    def on_status(self, status):
+        print(status)
         post = {
             "type": "Feature",
             "geometry": {
                 "type": "Polygon",
-                "coordinates": tweet.place
+                "coordinates": status.place,
+                "location": status.user.location
             },
             "properties": {
                 "reporter_id": "ID of new or existing user",
                 "source": {
                     "platform": "Twitter",
-                    "tweet_id": tweet.id,
-                    "user_name": tweet.user.screen_name
+                    "tweet_id": status.user.id_str,
+                    "user_name": status.user.screen_name,
+                    "user_language": status.user.lang,
+                    "user_timezone": status.user.time_zone
                 },
                 "disaster": {
                     "type": "earthquake",
                     "_id": "Search for a disaster in db and set this id. This is like foreign key"
                 },
                 "description": {
-                    "text": tweet.text,
+                    "text": status.text,
                     "images": []
                 },
                 "is_spam": False,
@@ -48,5 +45,15 @@ def searchBot():
 
         collection.insert_one(post)
 
+    def on_error(self, status_code):
+        if status_code == 420:
+            return False
 
-searchBot()
+
+def main():
+    stream = tweepy.Stream(api.auth, StreamListener())
+    stream.filter(track=["Earthquake"])
+
+
+if __name__ == "__main__":
+    main()

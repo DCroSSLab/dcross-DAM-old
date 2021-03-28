@@ -3,10 +3,10 @@ import tweepy
 import time
 from Twitterfeed import collection
 
-consumer_key = "NbDMP0SS5i5qbNjwVnsdynz4g"
-consumer_secret = "YyzHnsA007JSngJLPQLqwV6f7InQ7eEwePcp0MIfXCg1TEaGSN"
-key = "1360094602234122242-yIj9rcks2Q7VbMW4e6TKiEkj4Iu7oi"
-secret = "N0L4BmeWfOS1jf1aWyHsGzXu8rxvBP1a3FGaSGBLBxdpi"
+consumer_key = "zk9oBLweCS8HAVQUEaqDWFkxG"
+consumer_secret = "qlnLERV1NnTgcGn9CvlBTloIXac3ciucTPwjVjPOdPrBUuSjAJ"
+key = "1360094602234122242-lnnvTXeXHXQb4tzrvnFd02OzwTpzuO"
+secret = "O5A18DLGGPr5rsxPXDzk8fQgfsyp4gSkxlYMi6LO4WK2u"
 
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(key, secret)
